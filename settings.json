@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(brew *)",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(podman *)",
+      "Bash(podman-compose *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(pip *)",
+      "Bash(pip-audit *)",
+      "Bash(pytest *)",
+      "Bash(ruff *)",
+      "Bash(bandit *)",
+      "Bash(alembic *)",
+      "Bash(python *)",
+      "Bash(python3 *)"
+    ]
+  }
+}
