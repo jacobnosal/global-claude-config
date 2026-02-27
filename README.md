@@ -50,7 +50,7 @@ gh auth login
 ### 2. Clone this repo
 
 ```bash
-git clone <this-repo-url> ~/Library/CloudStorage/OneDrive-Accenture/projects/global-claude-config
+git clone https://github.com/jacobnosal/global-claude-config.git ~/Library/CloudStorage/OneDrive-Accenture/projects/global-claude-config
 ```
 
 > If OneDrive isn't synced yet, clone anywhere and adjust the symlink paths below.
