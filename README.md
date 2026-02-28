@@ -17,6 +17,7 @@ global-claude-config/
     ├── gh-plan/        /gh-plan        — Complexity assessment + issue hierarchy
     ├── gh-issue/       /gh-issue       — Create single GitHub issue
     ├── gh-investigate/ /gh-investigate — Investigate a broken workflow run and file an issue
+    ├── gh-watch/       /gh-watch       — Monitor workflow runs for a PR or repo-wide
     ├── gh-start/       /gh-start       — Start work on an issue
     ├── gh-finish/      /gh-finish      — Quality gates + DoD + open PR
     ├── gh-review/      /gh-review      — Address PR review feedback
