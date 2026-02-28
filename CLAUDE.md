@@ -25,7 +25,7 @@ These apply in every session across every project, without exception.
 ## Session Habits
 
 - Name every session immediately: `/rename <context-slug>` (e.g., `GH-42-auth`, `planning-sprint-4`)
-- Run startup ritual at the start of every session: `git status`, `gh pr list --author "@me"`, `gh issue list --assignee "@me"`
+- Run startup ritual at the start of every session: `git status`, `gh pr list --author "@me"`
 - Output a Session Summary at the end of every work session (completed / in-progress / blocked / next session recommendation)
 
 ## Cross-Project Backlog Workflow
@@ -39,9 +39,8 @@ These apply in every session across every project, without exception.
 3. Aggregate all items with status `Not Started` or `In Progress`
 4. Sort by: overdue items first, then P1 > P2 > P3 > P4, then by due date
 5. Present a cross-project daily view grouping by urgency (Overdue / Due Today / This Week / Upcoming)
-6. If `projects/trackers/PRIORITIES.md` exists, cross-reference for career-level priority alignment
-7. Ask user which item to tackle first
-8. After completing work, update the relevant BACKLOG.md (move Done items to Completed table)
+6. Ask user which item to tackle first
+7. After completing work, update the relevant BACKLOG.md (move Done items to Completed table)
 
 **BACKLOG.md standard format:**
 

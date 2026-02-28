@@ -19,23 +19,14 @@ Read every BACKLOG.md found. Note the project name from each file's heading.
 
 ---
 
-## Step 2 — Check for Priorities File
-
-If this file exists, read it for career-level priority alignment:
-```
-~/Library/CloudStorage/OneDrive-Accenture/projects/trackers/PRIORITIES.md
-```
-
----
-
-## Step 3 — Aggregate Active Items
+## Step 2 — Aggregate Active Items
 
 Collect every row where Status is `Not Started` or `In Progress` across all BACKLOG.md files.
 Record the source project name alongside each item.
 
 ---
 
-## Step 4 — Sort and Group
+## Step 3 — Sort and Group
 
 Today's date: use the current date from the system.
 
@@ -52,7 +43,7 @@ Today's date: use the current date from the system.
 
 ---
 
-## Step 5 — Present the View
+## Step 4 — Present the View
 
 Output in this format:
 
@@ -79,11 +70,9 @@ Output in this format:
 
 If a group is empty, omit it entirely.
 
-If PRIORITIES.md was found and any items align with career priorities, note them with a `★` in the Work Item column.
-
 ---
 
-## Step 6 — Ask What to Tackle
+## Step 5 — Ask What to Tackle
 
 After presenting the view:
 
