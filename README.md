@@ -16,6 +16,7 @@ global-claude-config/
     ├── backlog-done/   /backlog-done   — Mark backlog item complete
     ├── gh-plan/        /gh-plan        — Complexity assessment + issue hierarchy
     ├── gh-issue/       /gh-issue       — Create single GitHub issue
+    ├── gh-investigate/ /gh-investigate — Investigate a broken workflow run and file an issue
     ├── gh-start/       /gh-start       — Start work on an issue
     ├── gh-finish/      /gh-finish      — Quality gates + DoD + open PR
     ├── gh-review/      /gh-review      — Address PR review feedback
