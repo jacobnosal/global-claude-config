@@ -401,7 +401,7 @@ Do NOT implement the fix. Do NOT modify any files or AWS resources. This step is
 
 ## Step 11 — Present Findings for Review (Gate)
 
-Before filing any GitHub issues, present the complete findings to the user in a structured summary and **wait for explicit approval**.
+Before creating the GitHub Discussion or filing any issues, present the complete findings to the user in a structured summary and **wait for explicit approval**.
 
 Output the following:
 
@@ -432,29 +432,63 @@ FINDINGS (<N total>)
 
 Then ask:
 
-> Which of these findings should I file as GitHub issues?
+> A GitHub Discussion tagged `aws-sre` will always be created with the full investigation summary.
+> Which findings should also be filed as individual GitHub issues?
 > Options:
 >   A) All findings listed above
 >   B) Only Critical and High
 >   C) Let me choose — list the numbers to include (e.g., 1, 3, 5)
->   D) None — investigation complete, no issues needed
+>   D) None — create the discussion only, no individual issues
 
 **Do not proceed to Step 12 until the user responds.** File only the issues the user approves. If the user selects option C, wait for the list of numbers before continuing.
 
 ---
 
-## Step 12 — File Investigation Summary Issue (if user approved any findings)
+## Step 12 — Create GitHub Discussion
 
-Determine the current repo slug and create one summary issue:
+Create one GitHub Discussion containing the full investigation summary. This is always created regardless of whether any issues are filed.
+
+### 12a — Resolve repo identity and discussion category
 
 ```bash
 REPO_SLUG=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+OWNER=$(echo "$REPO_SLUG" | cut -d'/' -f1)
+REPO=$(echo "$REPO_SLUG" | cut -d'/' -f2)
 
-gh issue create \
-  --repo "$REPO_SLUG" \
-  --title "[SRE Investigation] $(date +%Y-%m-%d) — $ENV — <N> findings" \
-  --label "aws-sre" \
-  --body "$(cat <<'EOF'
+# Get repo node ID
+REPO_ID=$(gh api graphql \
+  -f query='{repository(owner:"'"$OWNER"'",name:"'"$REPO"'"){id}}' \
+  --jq '.data.repository.id')
+
+# Find the aws-sre discussion category; fall back to first available
+CATEGORY_RESULT=$(gh api graphql \
+  -f query='{repository(owner:"'"$OWNER"'",name:"'"$REPO"'"){discussionCategories(first:20){nodes{id,name}}}}')
+
+CATEGORY_ID=$(echo "$CATEGORY_RESULT" | \
+  jq -r '.data.repository.discussionCategories.nodes | map(select(.name == "aws-sre")) | first | .id // empty')
+
+if [ -z "$CATEGORY_ID" ]; then
+  # No aws-sre category — use first available and warn
+  CATEGORY_ID=$(echo "$CATEGORY_RESULT" | jq -r '.data.repository.discussionCategories.nodes[0].id')
+  CATEGORY_NAME=$(echo "$CATEGORY_RESULT" | jq -r '.data.repository.discussionCategories.nodes[0].name')
+  echo "Warning: No 'aws-sre' discussion category found. Using '$CATEGORY_NAME'."
+  echo "To use it automatically in future runs, create an 'aws-sre' category under GitHub > Discussions > Manage categories."
+fi
+```
+
+### 12b — Create the discussion
+
+```bash
+DISCUSSION_RESULT=$(gh api graphql \
+  -f query='mutation CreateDiscussion($repoId:ID!,$catId:ID!,$title:String!,$body:String!){
+    createDiscussion(input:{repositoryId:$repoId,categoryId:$catId,title:$title,body:$body}){
+      discussion{id,number,url}
+    }
+  }' \
+  -f repoId="$REPO_ID" \
+  -f catId="$CATEGORY_ID" \
+  -f title="[SRE Investigation] $(date +%Y-%m-%d) — $ENV — <N> findings" \
+  -f body="$(cat <<'EOF'
 ## SRE Investigation Summary
 
 - **Date:** <ISO date>
@@ -469,9 +503,11 @@ gh issue create \
 
 | # | Severity | Category | Finding | Issue |
 |---|----------|----------|---------|-------|
-| 1 | High     | Active Incident | <description> | #N |
-| 2 | Medium   | Monitoring Gap  | Expected alarm missing: <name> | #N |
-| 3 | Low      | Config Drift    | Alarm threshold differs from SRE.md | #N |
+| 1 | High     | Active Incident | <description> | _pending_ |
+| 2 | Medium   | Monitoring Gap  | Expected alarm missing: <name> | _pending_ |
+| 3 | Low      | Config Drift    | Alarm threshold differs from SRE.md | _pending_ |
+
+_Issue links will be added as comments below as they are filed._
 
 ## Infrastructure Health
 
@@ -502,10 +538,39 @@ gh issue create \
 - **Sample queries executed:** <count>
 - **Known limitations noted:** <count>
 EOF
-)"
+)")
+
+DISCUSSION_ID=$(echo "$DISCUSSION_RESULT" | jq -r '.data.createDiscussion.discussion.id')
+DISCUSSION_NUMBER=$(echo "$DISCUSSION_RESULT" | jq -r '.data.createDiscussion.discussion.number')
+DISCUSSION_URL=$(echo "$DISCUSSION_RESULT" | jq -r '.data.createDiscussion.discussion.url')
 ```
 
-Record the summary issue number — it will be referenced in each finding issue filed in Step 13.
+### 12c — Apply aws-sre label to the discussion
+
+```bash
+# Ensure the aws-sre label exists in this repo; create it if not
+LABEL_ID=$(gh api graphql \
+  -f query='{repository(owner:"'"$OWNER"'",name:"'"$REPO"'"){label(name:"aws-sre"){id}}}' \
+  --jq '.data.repository.label.id // empty')
+
+if [ -z "$LABEL_ID" ]; then
+  LABEL_ID=$(gh api graphql \
+    -f query='mutation($repoId:ID!){createLabel(input:{repositoryId:$repoId,name:"aws-sre",color:"FF6B35",description:"AWS SRE investigation findings"}){label{id}}}' \
+    -f repoId="$REPO_ID" \
+    --jq '.data.createLabel.label.id')
+fi
+
+gh api graphql \
+  -f query='mutation($discussionId:ID!,$labelId:ID!){
+    addLabelsToLabelable(input:{labelableId:$discussionId,labelIds:[$labelId]}){
+      labelable{... on Discussion{number}}
+    }
+  }' \
+  -f discussionId="$DISCUSSION_ID" \
+  -f labelId="$LABEL_ID"
+```
+
+Record `$DISCUSSION_ID`, `$DISCUSSION_NUMBER`, and `$DISCUSSION_URL` — they will be used in Steps 13 and 14.
 
 ---
 
@@ -513,8 +578,12 @@ Record the summary issue number — it will be referenced in each finding issue 
 
 For each finding the user approved in Step 11, file a `bug` issue. Order from highest to lowest severity.
 
+After filing **each** issue, immediately post a comment to the discussion created in Step 12 referencing that issue.
+
+### 13a — File the issue
+
 ```bash
-gh issue create \
+ISSUE_URL=$(gh issue create \
   --repo "$REPO_SLUG" \
   --title "[SRE] <Category>: <concise description> ($ENV)" \
   --label "bug,aws-sre" \
@@ -574,12 +643,40 @@ Critical / High / Medium / Low — <1-sentence rationale citing the SRE.md thres
 
 ## Related Investigation
 
-Part of: #<summary-issue-number>
+See discussion: <DISCUSSION_URL>
+EOF
+)")
+
+ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
+```
+
+### 13b — Comment on the discussion referencing this issue
+
+Immediately after filing the issue, post one comment to the discussion:
+
+```bash
+gh api graphql \
+  -f query='mutation AddComment($discussionId:ID!,$body:String!){
+    addDiscussionComment(input:{discussionId:$discussionId,body:$body}){
+      comment{url}
+    }
+  }' \
+  -f discussionId="$DISCUSSION_ID" \
+  -f body="$(cat <<EOF
+**Filed:** #$ISSUE_NUMBER — [<issue title>]($ISSUE_URL) \`[<SEVERITY>]\`
+
+> <1-sentence evidence summary>
 EOF
 )"
 ```
 
-After all approved issues are filed, output a final summary:
+Repeat 13a–13b for each approved finding before moving to the final summary.
+
+---
+
+## Step 14 — Final Summary
+
+After all issues are filed and discussion comments posted, output:
 
 ```
 SRE investigation complete.
@@ -591,10 +688,12 @@ SRE.md files: <list>
 Findings:    <N total> (<C> Critical, <H> High, <M> Medium, <L> Low)
 Filed:       <N approved> | Skipped: <N skipped>
 
+Discussion:
+  #<N>  [SRE Investigation] <title>  <discussion-url>
+
 Issues filed:
-  #<N>  [Investigation summary]  <url>
-  #<N>  [Critical] <title>       <url>
-  #<N>  [High]     <title>       <url>
+  #<N>  [Critical] <title>  <url>
+  #<N>  [High]     <title>  <url>
   ...
 
 Skipped (not filed per your selection):
@@ -609,7 +708,7 @@ Skipped (not filed per your selection):
 - Do NOT modify any local repository files during this investigation
 - Do NOT call any destructive or mutating AWS APIs (`delete`, `put`, `create`, `enable`, `disable`, `update`, etc.)
 - Do NOT push commits, create branches, or modify existing GitHub issues or PRs
-- Permitted write actions: creating GitHub issues in Steps 12 and 13 only
+- Permitted write actions: creating a GitHub Discussion and its comments (Steps 12–13), creating an `aws-sre` repo label if missing (Step 12c), and filing GitHub issues (Step 13) only
 - If a CloudWatch Logs Insights query returns no results, do not treat silence as confirmation of health — note that the log group may not be receiving events (this itself may be a finding)
 - If a resource is listed as a Known Limitation in the SRE.md (e.g., "RUM is disabled in local development"), do not file a finding for expected gaps in non-production environments
 - If no Terraform context is found, still complete the investigation — note in the summary that IaC-linked fix guidance is unavailable
