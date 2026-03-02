@@ -21,7 +21,8 @@ global-claude-config/
     ├── gh-start/       /gh-start       — Start work on an issue
     ├── gh-finish/      /gh-finish      — Quality gates + DoD + open PR
     ├── gh-review/      /gh-review      — Address PR review feedback
-    └── git-sync/       /git-sync       — Rebase on develop + run quality gates
+    ├── git-sync/       /git-sync       — Rebase on develop + run quality gates
+    └── the-usual/      /the-usual      — Full lifecycle alias: start issue OR commit+push+PR
 ```
 
 ## How It Works
